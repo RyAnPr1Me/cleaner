@@ -63,11 +63,37 @@ A universal Rust-based computer performance improver - an advanced system optimi
 
 ### From Source
 
+**Quick Build (Recommended):**
+
 ```bash
 # Clone the repository
 git clone https://github.com/RyAnPr1Me/cleaner.git
 cd cleaner
 
+# Build using the build script
+./build.sh        # Linux/macOS
+# or
+build.bat         # Windows
+
+# The binary will be available at build/cleaner
+```
+
+**Using Make:**
+
+```bash
+# Build release binary to build/ directory
+make build
+
+# Or just use make (build is the default target)
+make
+
+# See all available targets
+make help
+```
+
+**Using Cargo directly:**
+
+```bash
 # Build the project
 cargo build --release
 
