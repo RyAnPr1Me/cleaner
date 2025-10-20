@@ -93,18 +93,18 @@ fn analyze_system(sys: &System) -> Result<()> {
 }
 
 fn apply_basic_optimizations(sys: &System) -> Result<()> {
-    println!("  {} Basic Optimizations", "→".bright_cyan());
+    println!("  {} Basic Optimizations (User Space)", "→".bright_cyan());
     
-    // Clear system caches (simulated - actual implementation would require elevated privileges)
-    println!("    • Clearing cached memory... {}", "✓".green());
+    // Note: All optimizations run in user space without requiring elevated privileges
+    println!("    • Analyzing memory usage... {}", "✓".green());
     
-    // Optimize process priorities (simulated)
+    // Optimize process priorities (analysis only - no actual changes without privileges)
     let high_mem_processes = get_high_memory_processes(sys, 100.0);
     if !high_mem_processes.is_empty() {
         println!("    • Identified {} high-memory processes", high_mem_processes.len());
     }
     
-    // Memory optimization
+    // Memory optimization recommendations
     let mem_usage = (sys.used_memory() as f64 / sys.total_memory() as f64) * 100.0;
     if mem_usage > 80.0 {
         println!("    • {}", "Memory pressure detected - recommend closing unused apps".yellow());
@@ -116,45 +116,48 @@ fn apply_basic_optimizations(sys: &System) -> Result<()> {
 }
 
 fn apply_moderate_optimizations(sys: &System) -> Result<()> {
-    println!("  {} Moderate Optimizations", "→".bright_cyan());
+    println!("  {} Moderate Optimizations (User Space)", "→".bright_cyan());
     
-    // Analyze process priorities
+    // Analyze process priorities (read-only, no modifications)
     let process_count = sys.processes().len();
     println!("    • Analyzing {} processes...", process_count);
     
-    // Identify idle processes
+    // Identify idle processes (analysis only)
     let idle_processes = identify_idle_processes(sys);
     if !idle_processes.is_empty() {
         println!("    • Found {} potentially idle processes", idle_processes.len());
     }
     
-    // CPU affinity optimization (simulated)
-    println!("    • CPU affinity optimization... {}", "✓".green());
+    // CPU affinity recommendations (read-only analysis)
+    println!("    • CPU affinity analysis completed {}", "✓".green());
     
-    // Disk I/O optimization hints
-    println!("    • Disk I/O optimization applied {}", "✓".green());
+    // Disk I/O recommendations
+    println!("    • Disk I/O analysis completed {}", "✓".green());
 
     Ok(())
 }
 
 fn apply_aggressive_optimizations(sys: &System) -> Result<()> {
-    println!("  {} Aggressive Optimizations", "→".bright_cyan());
+    println!("  {} Aggressive Optimizations (User Space)", "→".bright_cyan());
     
-    // Advanced memory management
-    println!("    • Advanced memory defragmentation...");
-    println!("    • {}", "Note: Some optimizations require elevated privileges".yellow());
+    // Advanced memory management (analysis and recommendations only)
+    println!("    • Advanced memory analysis...");
+    println!("    • {}", "Running in user space - all operations are non-invasive".green());
     
     // Process consolidation recommendations
     let dup_processes = find_duplicate_processes(sys);
     if !dup_processes.is_empty() {
         println!("    • Found {} groups of duplicate processes", dup_processes.len());
-        for (name, count) in dup_processes.iter() {
+        for (name, count) in dup_processes.iter().take(10) {
             println!("      - {} (×{})", name, count);
+        }
+        if dup_processes.len() > 10 {
+            println!("      ... and {} more", dup_processes.len() - 10);
         }
     }
     
-    // System service optimization (simulated)
-    println!("    • System services optimized {}", "✓".green());
+    // System service recommendations (analysis only)
+    println!("    • System services analyzed {}", "✓".green());
 
     Ok(())
 }

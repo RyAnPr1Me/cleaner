@@ -80,17 +80,21 @@ struct CleanupTarget {
 fn get_cleanup_targets() -> Vec<CleanupTarget> {
     let mut targets = Vec::new();
 
-    // Platform-specific temporary directories
+    // Platform-specific temporary directories (user space only)
     #[cfg(target_os = "linux")]
     {
         if let Ok(home) = std::env::var("HOME") {
-            targets.push(CleanupTarget {
-                path: PathBuf::from("/tmp"),
-                description: "System temporary files".to_string(),
-                patterns: vec!["*".to_string()],
-                safe: true,
-            });
+            // User's temporary directory - safe to access without root
+            if let Ok(tmpdir) = std::env::var("TMPDIR") {
+                targets.push(CleanupTarget {
+                    path: PathBuf::from(tmpdir),
+                    description: "User temporary files".to_string(),
+                    patterns: vec!["*".to_string()],
+                    safe: true,
+                });
+            }
             
+            // User cache directory
             targets.push(CleanupTarget {
                 path: PathBuf::from(format!("{}/.cache", home)),
                 description: "User cache directory".to_string(),
@@ -98,9 +102,18 @@ fn get_cleanup_targets() -> Vec<CleanupTarget> {
                 safe: true,
             });
 
+            // User trash directory
             targets.push(CleanupTarget {
-                path: PathBuf::from(format!("{}/.local/share/Trash", home)),
+                path: PathBuf::from(format!("{}/.local/share/Trash/files", home)),
                 description: "Trash directory".to_string(),
+                patterns: vec!["*".to_string()],
+                safe: true,
+            });
+
+            // User's .tmp directory if it exists
+            targets.push(CleanupTarget {
+                path: PathBuf::from(format!("{}/.tmp", home)),
+                description: "User .tmp directory".to_string(),
                 patterns: vec!["*".to_string()],
                 safe: true,
             });
@@ -110,6 +123,17 @@ fn get_cleanup_targets() -> Vec<CleanupTarget> {
     #[cfg(target_os = "macos")]
     {
         if let Ok(home) = std::env::var("HOME") {
+            // User's temporary directory
+            if let Ok(tmpdir) = std::env::var("TMPDIR") {
+                targets.push(CleanupTarget {
+                    path: PathBuf::from(tmpdir),
+                    description: "User temporary files".to_string(),
+                    patterns: vec!["*".to_string()],
+                    safe: true,
+                });
+            }
+
+            // User trash directory
             targets.push(CleanupTarget {
                 path: PathBuf::from(format!("{}/.Trash", home)),
                 description: "Trash directory".to_string(),
@@ -117,9 +141,18 @@ fn get_cleanup_targets() -> Vec<CleanupTarget> {
                 safe: true,
             });
 
+            // User caches
             targets.push(CleanupTarget {
                 path: PathBuf::from(format!("{}/Library/Caches", home)),
                 description: "User caches".to_string(),
+                patterns: vec!["*".to_string()],
+                safe: true,
+            });
+
+            // User logs
+            targets.push(CleanupTarget {
+                path: PathBuf::from(format!("{}/Library/Logs", home)),
+                description: "User logs".to_string(),
                 patterns: vec!["*".to_string()],
                 safe: true,
             });
@@ -128,19 +161,53 @@ fn get_cleanup_targets() -> Vec<CleanupTarget> {
 
     #[cfg(target_os = "windows")]
     {
+        // User's temporary directory
         if let Ok(temp) = std::env::var("TEMP") {
             targets.push(CleanupTarget {
                 path: PathBuf::from(temp),
-                description: "Temporary files".to_string(),
+                description: "User temporary files".to_string(),
                 patterns: vec!["*".to_string()],
                 safe: true,
             });
         }
 
+        // Alternative user temp directory
+        if let Ok(tmp) = std::env::var("TMP") {
+            let tmp_path = PathBuf::from(&tmp);
+            // Only add if it's different from TEMP
+            if !targets.iter().any(|t| t.path == tmp_path) {
+                targets.push(CleanupTarget {
+                    path: tmp_path,
+                    description: "User TMP files".to_string(),
+                    patterns: vec!["*".to_string()],
+                    safe: true,
+                });
+            }
+        }
+
+        // Local AppData temp
         if let Ok(appdata) = std::env::var("LOCALAPPDATA") {
             targets.push(CleanupTarget {
                 path: PathBuf::from(format!("{}\\Temp", appdata)),
-                description: "Local temp files".to_string(),
+                description: "Local AppData temp files".to_string(),
+                patterns: vec!["*".to_string()],
+                safe: true,
+            });
+
+            // Windows update cache (user accessible)
+            targets.push(CleanupTarget {
+                path: PathBuf::from(format!("{}\\Microsoft\\Windows\\INetCache", appdata)),
+                description: "Internet cache".to_string(),
+                patterns: vec!["*".to_string()],
+                safe: true,
+            });
+        }
+
+        // Recycle bin for current user
+        if let Ok(userprofile) = std::env::var("USERPROFILE") {
+            targets.push(CleanupTarget {
+                path: PathBuf::from(format!("{}\\$Recycle.Bin", userprofile)),
+                description: "Recycle Bin".to_string(),
                 patterns: vec!["*".to_string()],
                 safe: true,
             });
@@ -154,10 +221,16 @@ fn scan_directory(path: &PathBuf, _patterns: &[String]) -> Result<(u64, usize)> 
     let mut total_size: u64 = 0;
     let mut file_count: usize = 0;
 
+    // Check if we have read permissions before trying to scan
+    if let Err(_) = std::fs::read_dir(path) {
+        // If we can't read the directory, return 0 instead of failing
+        return Ok((0, 0));
+    }
+
     for entry in WalkDir::new(path)
         .max_depth(3)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(|e| e.ok()) // Skip entries we can't access
     {
         if entry.file_type().is_file() {
             if let Ok(metadata) = entry.metadata() {
@@ -171,12 +244,19 @@ fn scan_directory(path: &PathBuf, _patterns: &[String]) -> Result<(u64, usize)> 
 }
 
 fn clean_directory(path: &PathBuf, _patterns: &[String]) -> Result<()> {
+    // Check if we have write permissions before trying to clean
+    if let Err(_) = std::fs::read_dir(path) {
+        // If we can't read the directory, skip it
+        return Ok(());
+    }
+
     for entry in WalkDir::new(path)
         .max_depth(3)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(|e| e.ok()) // Skip entries we can't access
     {
         if entry.file_type().is_file() {
+            // Silently skip files we can't delete (permission errors)
             let _ = fs::remove_file(entry.path());
         }
     }

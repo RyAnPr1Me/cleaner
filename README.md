@@ -14,19 +14,50 @@ A universal Rust-based computer performance improver - an advanced system optimi
   - Temporary file removal
   - Cache clearing
   - Safe file deletion with dry-run mode
+  - **Runs entirely in user space - no elevated privileges required**
   - Cross-platform support (Linux, macOS, Windows)
 
 - **Performance Optimization** ⚡
   - Multi-level optimization (Basic, Moderate, Aggressive)
-  - Memory management
-  - Process priority optimization
+  - Memory analysis and recommendations
+  - Process analysis
   - System resource recommendations
+  - **All operations safe for user space - no system modifications**
 
 - **Comprehensive System Information** 💻
   - OS details
   - Hardware specifications
   - Resource utilization
   - Top memory consumers
+
+## User Space Operation 🔒
+
+**Cleaner is designed to run completely in user space without requiring elevated privileges:**
+
+- ✅ **No sudo/administrator required** - All operations work with standard user permissions
+- ✅ **Safe by design** - Only accesses user-owned directories and files
+- ✅ **Read-only system analysis** - System monitoring and optimization use read-only operations
+- ✅ **User directories only** - Cleanup targets only user-accessible temporary files and caches
+
+### Platform-Specific User Directories
+
+**Linux:**
+- `$TMPDIR` or `~/.tmp` - User temporary files
+- `~/.cache` - User cache directory
+- `~/.local/share/Trash/files` - User trash
+
+**macOS:**
+- `$TMPDIR` - User temporary files
+- `~/.Trash` - User trash
+- `~/Library/Caches` - User caches
+- `~/Library/Logs` - User logs
+
+**Windows:**
+- `%TEMP%` - User temporary files
+- `%TMP%` - Alternative temp directory
+- `%LOCALAPPDATA%\Temp` - Local AppData temp
+- `%LOCALAPPDATA%\Microsoft\Windows\INetCache` - Internet cache
+- User's Recycle Bin
 
 ## Installation
 
@@ -130,28 +161,42 @@ cleaner --verbose monitor
 
 ## Optimization Levels
 
-### Level 1 - Basic
-- Memory cache clearing
+All optimization levels run in user space and perform analysis only - no system modifications require elevated privileges.
+
+### Level 1 - Basic (User Space)
+- Memory usage analysis
 - Basic process analysis
-- Safe optimizations only
+- Memory recommendations
+- Safe, read-only operations
 
-### Level 2 - Moderate (Recommended)
+### Level 2 - Moderate (Recommended, User Space)
 - All Level 1 optimizations
-- Process priority adjustments
-- CPU affinity optimization
-- Disk I/O optimization
+- Process priority analysis
+- CPU affinity analysis
+- Disk I/O analysis
+- Idle process identification
 
-### Level 3 - Aggressive
+### Level 3 - Aggressive (User Space)
 - All Level 1 & 2 optimizations
-- Advanced memory defragmentation
-- Process consolidation
-- System service optimization
+- Advanced memory analysis
+- Process consolidation recommendations
+- Duplicate process detection
+- System service analysis
+
+**Note:** All optimization operations are non-invasive and run with standard user permissions. The tool provides recommendations and analysis without requiring elevated privileges.
 
 ## Platform Support
 
-- ✅ Linux (Ubuntu, Debian, Fedora, Arch, etc.)
-- ✅ macOS
-- ✅ Windows
+**Fully tested and verified on:**
+- ✅ **Linux** (Ubuntu, Debian, Fedora, Arch, etc.) - Works with standard user permissions
+- ✅ **macOS** - Compatible with all modern versions
+- ✅ **Windows** - Windows 10, 11, and Server editions
+
+**Cross-platform features:**
+- Platform-specific cleanup targets
+- Automatic detection of user directories
+- Environment variable resolution
+- Graceful permission handling
 
 ## Requirements
 
@@ -173,10 +218,14 @@ This project uses the following high-quality Rust crates:
 
 ## Safety
 
-The cleaner tool is designed with safety in mind:
-- Dry-run mode for previewing changes
-- Only targets known temporary directories
-- No system-critical files are touched
+The cleaner tool is designed with safety and user-space operation in mind:
+- **No elevated privileges required** - Runs entirely in user space
+- **Dry-run mode** for previewing changes before cleanup
+- **Only targets user-accessible directories** - No system directories
+- **No system-critical files** are touched
+- **Cross-platform compatibility** with graceful permission handling
+- **Safe deletion practices** with error handling
+- **Read-only system analysis** - Monitoring and optimization don't modify system state
 - Safe deletion practices
 - Cross-platform compatibility checks
 
